@@ -4,8 +4,8 @@ services:
   db:
     image: postgres
     restart: always
-    env_file: 
-      - ./env
+    environment:
+      - POSTGRES_PASSWORD
   web:
     build: .
     command: python manage.py runserver 0.0.0.0:8000
@@ -15,5 +15,9 @@ services:
       - "8000:8000"
     depends_on:
       - db
-    env_file: 
-      - ./env
+    environment:
+      - DJANGO_DEBUG
+      - DJANGO_SECRET_KEY
+      - DJANGO_ALLOWED_HOSTS
+      - POSTGRES_PASSWORD
+      - ASANA_TOKEN
