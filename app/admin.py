@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Project, Task
+from .models import Project, Task, Assignee
 
 
 class ApiModelAdmin(admin.ModelAdmin):
@@ -14,4 +14,9 @@ class ProjectAdmin(ApiModelAdmin):
 
 @admin.register(Task)
 class TaskAdmin(ApiModelAdmin):
+    pass
+
+
+@admin.register(Assignee)
+class AssigneeAdmin(ApiModelAdmin):
     pass

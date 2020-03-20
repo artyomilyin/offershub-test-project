@@ -4,7 +4,12 @@ from django.conf import settings
 import asana
 
 
+
+
 class AsanaAPI:
+    TASK_FIELDS = ['gid', 'name', 'notes', 'assignee.gid', 'assignee.name', 'projects']
+    PROJECT_FIELDS = ['gid', 'name']
+    USER_FIELDS = ['gid', 'name']
 
     def __init__(self):
         self.client = asana.Client.access_token(settings.ASANA_TOKEN)
@@ -13,7 +18,7 @@ class AsanaAPI:
         """ It is possible that this function may return duplicates if
         the same projects appears in several workspaces. To be examined.
         """
-        opt_fields = ['gid', 'name']
+        opt_fields = self.PROJECT_FIELDS
         workspaces = self.client.workspaces.get_workspaces()
         projects = []
         for workspace in workspaces:
@@ -22,18 +27,15 @@ class AsanaAPI:
         return projects
 
     def get_project(self, project_id):
-        opt_fields = ['gid', 'name']
+        opt_fields = self.PROJECT_FIELDS
         return self.client.projects.get_project(project_id, opt_fields=opt_fields)
 
     def get_tasks_for_project(self, project_id):
-        opt_fields = ['gid', 'name', 'notes', 'assignee.gid']
+        opt_fields = self.TASK_FIELDS
         tasks_for_project = self.client.tasks.get_tasks_for_project(project_id, opt_fields=opt_fields)
         tasks = []
         for task in tasks_for_project:
-            flattened_task = dict(task)
-            if task['assignee']:
-                flattened_task['assignee'] = task['assignee']['gid']
-            tasks.append(flattened_task)
+            tasks.append(task)
         return tasks
 
     def get_all_tasks(self):
@@ -43,5 +45,14 @@ class AsanaAPI:
         return tasks
 
     def get_task(self, task_id):
-        opt_fields = ['gid', 'name', 'notes', 'assignee.gid']
+        opt_fields = self.TASK_FIELDS
         return self.client.tasks.get_task(task_id, opt_fields=opt_fields)
+
+    def get_all_users(self):
+        opt_fields = self.USER_FIELDS
+        workspaces = self.client.workspaces.get_workspaces()
+        users = []
+        for workspace in workspaces:
+            users.extend(self.client.users.get_users(workspace=workspace['gid'],
+                                                     opt_fields=opt_fields))
+        return users
