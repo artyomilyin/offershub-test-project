@@ -7,7 +7,7 @@ import asana
 
 
 class AsanaAPI:
-    TASK_FIELDS = ['gid', 'name', 'notes', 'assignee.gid', 'assignee.name', 'projects']
+    TASK_FIELDS = ['gid', 'name', 'notes', 'assignee.gid', 'assignee.name', 'projects.gid', 'projects.name']
     PROJECT_FIELDS = ['gid', 'name']
     USER_FIELDS = ['gid', 'name']
 
@@ -15,9 +15,6 @@ class AsanaAPI:
         self.client = asana.Client.access_token(settings.ASANA_TOKEN)
 
     def get_all_projects(self):
-        """ It is possible that this function may return duplicates if
-        the same projects appears in several workspaces. To be examined.
-        """
         opt_fields = self.PROJECT_FIELDS
         workspaces = self.client.workspaces.get_workspaces()
         projects = []
