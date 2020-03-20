@@ -1,41 +1,40 @@
 import requests
 from django.conf import settings
 
-
-PROJECTS_PATH = '/projects'
-TASKS_PATH = '/tasks'
-API_BASE = 'https://app.asana.com/api/1.0'
-API_HEADERS = {'Authorization': f'Bearer {settings.ASANA_TOKEN}'}
+import asana
 
 
 class AsanaAPI:
-    api_base = API_BASE
-    headers = API_HEADERS
 
-    def __init__(self, ModelName):
-        self.model = ModelName
-
-    def _get_request(self, path, **kwargs):
-        return requests.get(f'{self.api_base}{path}', headers=self.headers, **kwargs).json()['data']
+    def __init__(self):
+        self.client = asana.Client.access_token(settings.ASANA_TOKEN)
 
     def get_all_projects(self):
-        params = {'opt_fields':'gid,name'}
-        return self._get_request(PROJECTS_PATH, params=params)
+        """ It is possible that this function may return duplicates if
+        the same projects appears in several workspaces. To be examined.
+        """
+        opt_fields = ['gid', 'name']
+        workspaces = self.client.workspaces.get_workspaces()
+        projects = []
+        for workspace in workspaces:
+            projects.extend(self.client.projects.get_projects(workspace=workspace['gid'], 
+                                                              opt_fields=opt_fields))
+        return projects
 
     def get_project(self, project_id):
-        params = {'opt_fields':'gid,name'}
-        return self._get_request(f'{PROJECTS_PATH}/{project_id}', params=params)
+        opt_fields = ['gid', 'name']
+        return self.client.projects.get_project(project_id, opt_fields=opt_fields)
 
     def get_tasks_for_project(self, project_id):
-        params = {'opt_fields':'gid,name,notes,assignee.gid'}
-        middle = self._get_request(f'{PROJECTS_PATH}/{project_id}{TASKS_PATH}', params=params)
-        dct = []
-        for task in middle:
-            formatted_task = dict(task)
+        opt_fields = ['gid', 'name', 'notes', 'assignee.gid']
+        tasks_for_project = self.client.tasks.get_tasks_for_project(project_id, opt_fields=opt_fields)
+        tasks = []
+        for task in tasks_for_project:
+            flattened_task = dict(task)
             if task['assignee']:
-                formatted_task['assignee'] = task['assignee']['gid']
-            dct.append(formatted_task)
-        return dct
+                flattened_task['assignee'] = task['assignee']['gid']
+            tasks.append(flattened_task)
+        return tasks
 
     def get_all_tasks(self):
         tasks = []
@@ -44,5 +43,5 @@ class AsanaAPI:
         return tasks
 
     def get_task(self, task_id):
-        params = {'opt_fields':'gid,name,notes,assignee.gid'}
-        return self._get_request(f'{PROJECTS_PATH}/{project_id}', params=params)
+        opt_fields = ['gid', 'name', 'notes', 'assignee.gid']
+        return self.client.tasks.get_task(task_id, opt_fields=opt_fields)
