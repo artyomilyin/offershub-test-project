@@ -2,6 +2,16 @@ from django.db import models
 from app.asana_api import AsanaAPI
 
 
+class AssigneeManager(models.Manager):
+    def all(self):
+        api = AsanaAPI()
+        users = api.get_all_users()
+        for row in users:
+            model_object = self.model(**row)
+            model_object.save()
+        return self.get_queryset()
+
+
 class ProjectManager(models.Manager):
     def all(self):
         api = AsanaAPI()
@@ -25,16 +35,6 @@ class TaskManager(models.Manager):
                 assignee = Assignee(**row['assignee'])
                 assignee.save()
                 model_object.assignee = assignee
-            model_object.save()
-        return self.get_queryset()
-
-
-class AssigneeManager(models.Manager):
-    def all(self):
-        api = AsanaAPI()
-        users = api.get_all_users()
-        for row in users:
-            model_object = self.model(**row)
             model_object.save()
         return self.get_queryset()
 
