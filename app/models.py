@@ -31,19 +31,21 @@ class TaskManager(models.Manager, WithAPI):
         foreignkey_fields = ['assignee', 'projects']
         for row in tasks:
             object_to_save = {key: value for key, value in row.items() if key not in foreignkey_fields}
-            model_object = self.model(**object_to_save)
+            model_object, model_object_created = self.model.objects.get_or_create(**object_to_save)
             if row['assignee']:
-                assignee = Assignee(**row['assignee'])
-                assignee.save()
+                assignee, created = Assignee.objects.get_or_create(**row['assignee'])
+                if created:
+                    assignee.save()
                 model_object.assignee = assignee
-            model_object.save()
+            model_object.save(from_django=False)
             if row['projects']:
                 model_object.projects.clear()
                 for project in row['projects']:
-                    project = Project(**project)
-                    project.save()
+                    project, created = Project.objects.get_or_create(**project)
+                    if created:
+                        project.save()
                     model_object.projects.add(project)
-            model_object.save()
+            model_object.save(from_django=False)
         return self.get_queryset()
 
 
@@ -79,9 +81,13 @@ class Task(models.Model, WithAPI):
     def __str__(self):
         return f'Task: {self.name}'
 
-    def save(self, *args, **kwargs):
-        update_fields = ['name', 'notes']
-        update_object = {key: value for key, value in self.__dict__.items() if key in update_fields}
-        print(update_object)
-        self.api.client.tasks.update_task(self.gid, params=update_object)
+    def save(self, from_django=True, *args, **kwargs):
+        if from_django:
+            update_fields = ['name', 'notes']
+            update_object = {key: value for key, value in self.__dict__.items() if key in update_fields}
+            print("TASK:UPDATE:")
+            projects = self.projects
+            print(update_object)
+            print(projects)
+            self.api.client.tasks.update_task(self.gid, params=update_object)
         super(Task, self).save(*args, **kwargs)
