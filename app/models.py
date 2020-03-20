@@ -2,10 +2,14 @@ from django.db import models
 from app.asana_api import AsanaAPI
 
 
-class AssigneeManager(models.Manager):
+class APIManager(models.Manager):
+    def __init__(self):
+        self.api = AsanaAPI()
+
+
+class AssigneeManager(APIManager):
     def all(self):
-        api = AsanaAPI()
-        users = api.get_all_users()
+        users = self.api.get_all_users()
         for row in users:
             model_object = self.model(**row)
             model_object.save()
@@ -14,8 +18,7 @@ class AssigneeManager(models.Manager):
 
 class ProjectManager(models.Manager):
     def all(self):
-        api = AsanaAPI()
-        projects = api.get_all_projects()
+        projects = self.api.get_all_projects()
         for row in projects:
             model_object = self.model(**row)
             model_object.save()
@@ -24,12 +27,9 @@ class ProjectManager(models.Manager):
 
 class TaskManager(models.Manager):
     def all(self):
-        api = AsanaAPI()
-        tasks = api.get_all_tasks()
+        tasks = self.api.get_all_tasks()
         for row in tasks:
             object_to_save = {key: value for key, value in row.items() if key not in ['assignee']}
-            print("HERE:")
-            print(object_to_save)
             model_object = self.model(**object_to_save)
             if row['assignee']:
                 assignee = Assignee(**row['assignee'])
