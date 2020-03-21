@@ -50,7 +50,7 @@ class AssigneeManager(AsanaManager):
         user_gids = [user['gid'] for user in users]
         for user in users:
             self.create_or_update_if_necessary(user)
-        print(list(self.model.objects.exclude(pk__in=user_gids).delete()))
+        self.model.objects.exclude(pk__in=user_gids).delete()
         return self.get_queryset()
 
 
@@ -60,7 +60,7 @@ class ProjectManager(AsanaManager):
         project_gids = [project['gid'] for project in projects]
         for project in projects:
             self.create_or_update_if_necessary(project)
-        print(list(self.model.objects.exclude(pk__in=project_gids).delete()))
+        self.model.objects.exclude(pk__in=project_gids).delete()
         return self.get_queryset()    
 
 
@@ -97,7 +97,7 @@ class TaskManager(AsanaManager):
 
             if assignee_orig != model_object.assignee or projects_orig != model_object.projects:
                 model_object.save(from_django_admin=False)
-        print(list(self.model.objects.exclude(pk__in=task_gids).delete()))
+        self.model.objects.exclude(pk__in=task_gids).delete()
         return self.get_queryset()
 
 
@@ -140,12 +140,16 @@ class Task(AsanaModel):
         return f'Task: {self.name}'
 
     def save(self, from_django_admin=True, *args, **kwargs):
-        print(args)
-        print(kwargs)
         if from_django_admin:
             update_fields = ['name', 'notes']
             update_object = {key: value for key, value in self.__dict__.items() if key in update_fields}
             projects = self.projects
             self.api.client.tasks.update_task(self.gid, params=update_object)
+
+            for project in self.projects.all():
+                update_fields = ['gid']
+                update_object = {'project': project.gid}
+                print(update_object)
+                self.api.client.tasks.add_project_for_task(self.gid, params=update_object)
         print(f"[DB]Task {self.name} saving...")
         super(Task, self).save(*args, **kwargs)
