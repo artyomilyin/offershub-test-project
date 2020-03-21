@@ -49,6 +49,7 @@ class AssigneeManager(AsanaManager):
         users = self.api.get_all_users()
         for user in users:
             self.create_or_update_if_necessary(user)
+        print(list(self.model.objects.exclude(pk__in=[task['gid'] for user in users]).delete()))
         return self.get_queryset()
 
 
@@ -57,6 +58,7 @@ class ProjectManager(AsanaManager):
         projects = self.api.get_all_projects()
         for project in projects:
             self.create_or_update_if_necessary(project)
+        print(list(self.model.objects.exclude(pk__in=[task['gid'] for project in projects]).delete()))
         return self.get_queryset()    
 
 
