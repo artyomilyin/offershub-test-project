@@ -11,9 +11,14 @@ class AsanaModel(models.Model, WithAPI):
     EQ_IGNORED_FIELDS = ['_state', 'api']
 
     def __eq__(self, other):
+        if not other:
+            return super(AsanaModel, self).__eq__(other)
         values = [(k,v) for k,v in self.__dict__.items() if k not in self.EQ_IGNORED_FIELDS]
         other_values = [(k,v) for k,v in other.__dict__.items() if k not in self.EQ_IGNORED_FIELDS]
         return values == other_values
+
+    def __hash__(self):
+        return super(AsanaModel, self).__hash__()
 
     def __str__(self):
         return f'{self.__class__.__name__}: {self.name}'
@@ -61,13 +66,20 @@ class TaskManager(AsanaManager):
         foreignkey_fields = ['assignee', 'projects']
         for row in tasks:
             initial_dict = {key: value for key, value in row.items() if key not in foreignkey_fields}
-            model_object, created = self.model.objects.get_or_create(**initial_dict)
-            if created:
+            model_object, modified = self.create_or_update_if_necessary(initial_dict)
+            if modified:
                 model_object.save()
+            
+            foreignkey_updated = False
+            assignee_orig = model_object.assignee
+            projects_orig = model_object.projects
+
             if row['assignee']:
                 model_object.assignee, modified = self.create_or_update_if_necessary(row['assignee'], Assignee)
                 if modified:
                     model_object.save()
+            else:
+                model_object.assignee = None
             if row['projects']:
                 updated_projects = []
                 for project in row['projects']:
@@ -75,8 +87,12 @@ class TaskManager(AsanaManager):
                     updated_projects.append(project_object)
                 if model_object.projects != updated_projects:
                     model_object.projects.set(updated_projects)
-            if created:
-                model_object.save(from_django=False)
+            else:
+                model_object.projects.clear()
+
+            if assignee_orig != model_object.assignee or projects_orig != model_object.projects:
+                model_object.save(from_django_admin=False)
+        print(list(self.model.objects.exclude(pk__in=[task['gid'] for task in tasks]).delete()))
         return self.get_queryset()
 
 
@@ -105,7 +121,7 @@ class Project(AsanaModel):
 class Task(AsanaModel):
     gid = models.CharField(max_length=250, primary_key=True, editable=False)
     name = models.CharField(max_length=1000)
-    notes = models.TextField()
+    notes = models.TextField(blank=True)
     assignee = models.ForeignKey(to=Assignee, on_delete=models.CASCADE, null=True)
     projects = models.ManyToManyField(Project)
 
@@ -113,17 +129,16 @@ class Task(AsanaModel):
 
     def __init__(self, *args, **kwargs):
         super(Task, self).__init__(*args, **kwargs)
-        self.EQ_IGNORED_FIELDS.extend(['assignee', 'projects'])
+        self.EQ_IGNORED_FIELDS.extend(['assignee_id', 'projects'])
 
     def __str__(self):
         return f'Task: {self.name}'
 
-    def save(self, from_django=True, *args, **kwargs):
-        if from_django:
+    def save(self, from_django_admin=True, *args, **kwargs):
+        if from_django_admin:
             update_fields = ['name', 'notes']
             update_object = {key: value for key, value in self.__dict__.items() if key in update_fields}
             projects = self.projects
-            print(projects)
             self.api.client.tasks.update_task(self.gid, params=update_object)
         print(f"[DB]Task {self.name} saving...")
         super(Task, self).save(*args, **kwargs)
