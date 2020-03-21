@@ -39,6 +39,11 @@ class AsanaAPI:
         tasks = []
         for project in self.get_all_projects():
             tasks.extend(self.get_tasks_for_project(project['gid']))
+        for workspace in self.client.workspaces.get_workspaces():
+            tasks_without_projects = self.client.tasks.get_tasks(workspace=workspace['gid'], 
+                                                                 assignee=self.client.users.me()['gid'],
+                                                                 opt_fields=self.TASK_FIELDS)
+            tasks.extend([item for item in tasks_without_projects if item['gid'] not in tasks])
         return tasks
 
     def get_task(self, task_id):
