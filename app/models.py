@@ -49,7 +49,7 @@ class AssigneeManager(AsanaManager):
         users = self.api.get_all_users()
         for user in users:
             self.create_or_update_if_necessary(user)
-        print(list(self.model.objects.exclude(pk__in=[task['gid'] for user in users]).delete()))
+        print(list(self.model.objects.exclude(pk__in=[user['gid'] for user in users]).delete()))
         return self.get_queryset()
 
 
@@ -58,7 +58,7 @@ class ProjectManager(AsanaManager):
         projects = self.api.get_all_projects()
         for project in projects:
             self.create_or_update_if_necessary(project)
-        print(list(self.model.objects.exclude(pk__in=[task['gid'] for project in projects]).delete()))
+        print(list(self.model.objects.exclude(pk__in=[project['gid'] for project in projects]).delete()))
         return self.get_queryset()    
 
 
@@ -137,6 +137,8 @@ class Task(AsanaModel):
         return f'Task: {self.name}'
 
     def save(self, from_django_admin=True, *args, **kwargs):
+        print(args)
+        print(kwargs)
         if from_django_admin:
             update_fields = ['name', 'notes']
             update_object = {key: value for key, value in self.__dict__.items() if key in update_fields}
