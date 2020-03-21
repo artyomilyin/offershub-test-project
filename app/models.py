@@ -47,24 +47,27 @@ class AsanaManager(models.Manager, WithAPI):
 class AssigneeManager(AsanaManager):
     def all(self):
         users = self.api.get_all_users()
+        user_gids = [user['gid'] for user in users]
         for user in users:
             self.create_or_update_if_necessary(user)
-        print(list(self.model.objects.exclude(pk__in=[user['gid'] for user in users]).delete()))
+        print(list(self.model.objects.exclude(pk__in=user_gids).delete()))
         return self.get_queryset()
 
 
 class ProjectManager(AsanaManager):
     def all(self):
         projects = self.api.get_all_projects()
+        project_gids = [project['gid'] for project in projects]
         for project in projects:
             self.create_or_update_if_necessary(project)
-        print(list(self.model.objects.exclude(pk__in=[project['gid'] for project in projects]).delete()))
+        print(list(self.model.objects.exclude(pk__in=project_gids).delete()))
         return self.get_queryset()    
 
 
 class TaskManager(AsanaManager):
     def all(self):
         tasks = self.api.get_all_tasks()
+        task_gids = [task['gid'] for task in tasks]
         foreignkey_fields = ['assignee', 'projects']
         for row in tasks:
             initial_dict = {key: value for key, value in row.items() if key not in foreignkey_fields}
@@ -94,7 +97,7 @@ class TaskManager(AsanaManager):
 
             if assignee_orig != model_object.assignee or projects_orig != model_object.projects:
                 model_object.save(from_django_admin=False)
-        print(list(self.model.objects.exclude(pk__in=[task['gid'] for task in tasks]).delete()))
+        print(list(self.model.objects.exclude(pk__in=task_gids).delete()))
         return self.get_queryset()
 
 
