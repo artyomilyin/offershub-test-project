@@ -14,7 +14,7 @@ class ProjectAdmin(ApiModelAdmin):
 
 @admin.register(Task)
 class TaskAdmin(ApiModelAdmin):
-    pass
+    list_display = ['name', 'assignee']
 
 
 @admin.register(Assignee)
