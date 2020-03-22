@@ -128,7 +128,7 @@ class Task(AsanaModel):
     name = models.CharField(max_length=1000)
     notes = models.TextField(blank=True)
     assignee = models.ForeignKey(to=Assignee, on_delete=models.CASCADE, blank=True, null=True)
-    projects = models.ManyToManyField(Project)
+    projects = models.ManyToManyField(Project, blank=True)
 
     objects = TaskManager()
 
@@ -145,8 +145,12 @@ class Task(AsanaModel):
             update_fields = ['name', 'notes']
             update_object = {key: value for key, value in self.__dict__.items() if key in update_fields}
             update_object['assignee'] = self.assignee_id
-            self.api.client.tasks.update_task(self.gid, params=update_object)
-
+            if self.gid:
+                self.api.client.tasks.update_task(self.gid, params=update_object)
+            else:
+                workspace_gid = list(self.api.client.workspaces.get_workspaces())[0]['gid']
+                response = self.api.client.tasks.create_task(update_object, workspace=workspace_gid)
+                self.gid = response['gid']
             projects = self.projects
             print(projects)
             for project in self.projects.all():
