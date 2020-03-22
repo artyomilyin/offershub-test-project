@@ -16,6 +16,7 @@ class AsanaAPI:
 
     def __init__(self):
         self.client = asana.Client.access_token(settings.ASANA_TOKEN)
+        self.client.options['max_retries'] = 15
 
     def get_all_projects(self):
         opt_fields = self.PROJECT_FIELDS
