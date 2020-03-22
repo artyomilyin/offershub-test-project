@@ -4,6 +4,9 @@ from django.conf import settings
 import asana
 
 
+class WithAPI:
+    def __init__(self):
+        self.api = AsanaAPI()
 
 
 class AsanaAPI:

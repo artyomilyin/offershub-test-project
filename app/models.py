@@ -1,10 +1,5 @@
 from django.db import models
-from app.asana_api import AsanaAPI
-
-
-class WithAPI:
-    def __init__(self):
-        self.api = AsanaAPI()
+from app.asana_api import WithAPI
 
 
 class AsanaModel(models.Model, WithAPI):
