@@ -120,14 +120,14 @@ class Project(AsanaModel):
             response = self.api.client.projects.create_project(object_to_create)
             self.gid = response['gid']
         print(f"[DB]Project {self.name} saving...")
-        super(Project, self).save(*args, **kwargs)
+        return super(Project, self).save(*args, **kwargs)
 
 
 class Task(AsanaModel):
     gid = models.CharField(max_length=250, primary_key=True, editable=False)
     name = models.CharField(max_length=1000)
     notes = models.TextField(blank=True)
-    assignee = models.ForeignKey(to=Assignee, on_delete=models.CASCADE, null=True)
+    assignee = models.ForeignKey(to=Assignee, on_delete=models.CASCADE, blank=True, null=True)
     projects = models.ManyToManyField(Project)
 
     objects = TaskManager()
@@ -141,15 +141,20 @@ class Task(AsanaModel):
 
     def save(self, from_django_admin=True, *args, **kwargs):
         if from_django_admin:
+            save_result = super(Task, self).save(*args, **kwargs)
             update_fields = ['name', 'notes']
             update_object = {key: value for key, value in self.__dict__.items() if key in update_fields}
-            projects = self.projects
+            update_object['assignee'] = self.assignee_id
             self.api.client.tasks.update_task(self.gid, params=update_object)
 
+            projects = self.projects
+            print(projects)
             for project in self.projects.all():
                 update_fields = ['gid']
                 update_object = {'project': project.gid}
                 print(update_object)
                 self.api.client.tasks.add_project_for_task(self.gid, params=update_object)
+            return save_result
+            
         print(f"[DB]Task {self.name} saving...")
-        super(Task, self).save(*args, **kwargs)
+        return super(Task, self).save(*args, **kwargs)
