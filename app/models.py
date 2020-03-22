@@ -114,11 +114,14 @@ class Project(AsanaModel):
         return f'Project: {self.name}'
     
     def save(self, from_django_admin=False, *args, **kwargs):
-        if not from_django_admin and self.gid == '':
+        if not from_django_admin:
             object_to_create = {'name': self.name,
                                 'workspace': list(self.api.client.workspaces.get_workspaces())[0]['gid']}
-            response = self.api.client.projects.create_project(object_to_create)
-            self.gid = response['gid']
+            if self.gid:
+                self.api.client.projects.update_project(self.gid, object_to_create)
+            else:
+                response = self.api.client.projects.create_project(object_to_create)
+                self.gid = response['gid']
         print(f"[DB]Project {self.name} saving...")
         return super(Project, self).save(*args, **kwargs)
 
@@ -141,7 +144,6 @@ class Task(AsanaModel):
 
     def save(self, from_django_admin=True, *args, **kwargs):
         if from_django_admin:
-            save_result = super(Task, self).save(*args, **kwargs)
             update_fields = ['name', 'notes']
             update_object = {key: value for key, value in self.__dict__.items() if key in update_fields}
             update_object['assignee'] = self.assignee_id
@@ -151,14 +153,6 @@ class Task(AsanaModel):
                 workspace_gid = list(self.api.client.workspaces.get_workspaces())[0]['gid']
                 response = self.api.client.tasks.create_task(update_object, workspace=workspace_gid)
                 self.gid = response['gid']
-            projects = self.projects
-            print(projects)
-            for project in self.projects.all():
-                update_fields = ['gid']
-                update_object = {'project': project.gid}
-                print(update_object)
-                self.api.client.tasks.add_project_for_task(self.gid, params=update_object)
-            return save_result
-            
+
         print(f"[DB]Task {self.name} saving...")
         return super(Task, self).save(*args, **kwargs)
