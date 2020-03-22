@@ -102,6 +102,9 @@ class Assignee(AsanaModel):
     
     objects = AssigneeManager()
 
+    def save(self, from_django_admin=False, *args, **kwargs):
+        return super(Assignee, self).save(*args, **kwargs)
+
 
 
 class Project(AsanaModel):
