@@ -34,7 +34,7 @@ class AsanaManager(models.Manager, WithAPI):
             print(f"{model.__name__}: {item_gid} {item} object didn't exist or differs from existing. Saving...")
             for i in item:
                 setattr(model_object, i, item[i])
-            model_object.save()
+            model_object.save(from_django_admin=False)
             modified = True
         return model_object, modified
 
@@ -113,7 +113,12 @@ class Project(AsanaModel):
     def __str__(self):
         return f'Project: {self.name}'
     
-    def save(self, *args, **kwargs):
+    def save(self, from_django_admin=False, *args, **kwargs):
+        if not from_django_admin and self.gid == '':
+            object_to_create = {'name': self.name,
+                                'workspace': list(self.api.client.workspaces.get_workspaces())[0]['gid']}
+            response = self.api.client.projects.create_project(object_to_create)
+            self.gid = response['gid']
         print(f"[DB]Project {self.name} saving...")
         super(Project, self).save(*args, **kwargs)
 
