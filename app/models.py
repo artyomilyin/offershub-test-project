@@ -3,6 +3,9 @@ from app.asana_api import WithAPI
 
 
 class AsanaModel(models.Model, WithAPI):
+    """This is a base model for all Asana Models. It contains __eq__ method's override as well as 
+    overrides for __hash__ and __str__ methods.
+    """
     EQ_IGNORED_FIELDS = ['_state', 'api']
 
     def __eq__(self, other):
@@ -24,6 +27,8 @@ class AsanaModel(models.Model, WithAPI):
 
 class AsanaManager(models.Manager, WithAPI):
     def create_or_update_if_necessary(self, item, model=None):
+        """Check if there is an existing model for the item and also check if it contains relevant field values.
+        """
         if not model:
             model = self.model
         modified = False
@@ -41,6 +46,8 @@ class AsanaManager(models.Manager, WithAPI):
 
 class AssigneeManager(AsanaManager):
     def all(self):
+        """Get all the users from Asana and save them if necessary. Delete those which don't exist anymore.
+        """
         users = self.api.get_all_users()
         user_gids = [user['gid'] for user in users]
         for user in users:
@@ -51,6 +58,8 @@ class AssigneeManager(AsanaManager):
 
 class ProjectManager(AsanaManager):
     def all(self):
+        """Get all the projects from Asana and save them if necessary. Delete those which don't exist anymore.
+        """
         projects = self.api.get_all_projects()
         project_gids = [project['gid'] for project in projects]
         for project in projects:
@@ -61,8 +70,12 @@ class ProjectManager(AsanaManager):
 
 class TaskManager(AsanaManager):
     def all(self):
+        """Get all the tasks from Asana (for each project and each workspace) and save them if necessary.
+        Delete those which don't exist anymore.
+        """
         tasks = self.api.get_all_tasks()
         task_gids = [task['gid'] for task in tasks]
+        # these fields will be processed separately
         foreignkey_fields = ['assignee', 'projects']
         for row in tasks:
             initial_dict = {key: value for key, value in row.items() if key not in foreignkey_fields}
@@ -73,7 +86,6 @@ class TaskManager(AsanaManager):
             foreignkey_updated = False
             assignee_orig = model_object.assignee
             projects_orig = model_object.projects
-
             if row['assignee']:
                 model_object.assignee, modified = self.create_or_update_if_necessary(row['assignee'], Assignee)
                 if modified:
@@ -103,6 +115,7 @@ class Assignee(AsanaModel):
     objects = AssigneeManager()
 
     def save(self, from_django_admin=False, *args, **kwargs):
+        # this override is needed only to handle 'from_django_admin' argument from ancestor
         return super(Assignee, self).save(*args, **kwargs)
 
 
@@ -112,9 +125,6 @@ class Project(AsanaModel):
     name = models.CharField(max_length=250)
 
     objects = ProjectManager()
-
-    def __str__(self):
-        return f'Project: {self.name}'
     
     def save(self, from_django_admin=False, *args, **kwargs):
         if not from_django_admin:
@@ -140,12 +150,11 @@ class Task(AsanaModel):
 
     def __init__(self, *args, **kwargs):
         super(Task, self).__init__(*args, **kwargs)
+        # this fields will not be checked when __eq__ is called
         self.EQ_IGNORED_FIELDS.extend(['assignee_id', 'projects'])
 
-    def __str__(self):
-        return f'Task: {self.name}'
-
     def save(self, from_django_admin=True, *args, **kwargs):
+        # from_django_admin means the user hit the button Save in django-admin interface
         if from_django_admin:
             update_fields = ['name', 'notes']
             update_object = {key: value for key, value in self.__dict__.items() if key in update_fields}

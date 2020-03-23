@@ -17,6 +17,8 @@ class TaskAdmin(ApiModelAdmin):
     list_display = ['name', 'assignee']
 
     def save_related(self, request, form, formsets, change):
+        """Save every new project and delete each old project
+        """
         new_projects = [project.gid for project in form.cleaned_data['projects']]
         old_projects = [project.gid for project in form.instance.projects.all()]
         to_add = [project for project in new_projects if project not in old_projects]

@@ -10,6 +10,8 @@ class WithAPI:
 
 
 class AsanaAPI:
+    """A wrapper for official Asana python package
+    """
     TASK_FIELDS = ['gid', 'name', 'notes', 'assignee.gid', 'assignee.name', 'projects.gid', 'projects.name']
     PROJECT_FIELDS = ['gid', 'name']
     USER_FIELDS = ['gid', 'name']
